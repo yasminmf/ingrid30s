@@ -1,0 +1,1291 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Gol dos 30 16-bit - Ingrid 30's</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        --ink: #1a1208;
+        --paper: #fff0a8;
+        --yellow: #ffd000;
+        --orange: #ff8a00;
+        --red: #e02020;
+        --green: #159947;
+        --field: #2aa84f;
+        --field-dark: #16733a;
+        --blue: #1f4bd8;
+        --navy: #0b1f5f;
+        --white: #fff8d8;
+        --shadow: rgba(20, 13, 5, 0.28);
+        font-family:
+          "Courier New",
+          Monaco,
+          Consolas,
+          sans-serif;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        width: 100%;
+        min-height: 100%;
+        margin: 0;
+      }
+
+      body {
+        display: grid;
+        place-items: center;
+        min-height: 100svh;
+        overflow-x: hidden;
+        color: var(--white);
+        background:
+          linear-gradient(90deg, rgba(255, 208, 0, 0.12) 0 8px, transparent 8px 16px),
+          linear-gradient(0deg, rgba(255, 255, 255, 0.08) 0 8px, transparent 8px 16px),
+          linear-gradient(135deg, #0c3f24 0%, #0b245f 52%, #571313 100%);
+      }
+
+      body::before {
+        position: fixed;
+        inset: 0;
+        z-index: -2;
+        content: "";
+        opacity: 0.22;
+        background-image:
+          linear-gradient(rgba(255, 255, 255, 0.08) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(255, 255, 255, 0.08) 1px, transparent 1px);
+        background-size: 24px 24px;
+      }
+
+      body::after {
+        position: fixed;
+        inset: 0;
+        z-index: -1;
+        pointer-events: none;
+        content: "";
+        opacity: 0.12;
+        background: repeating-linear-gradient(
+          to bottom,
+          transparent 0,
+          transparent 3px,
+          rgba(0, 0, 0, 0.7) 4px
+        );
+        mix-blend-mode: multiply;
+      }
+
+      .app {
+        width: min(100vw, 760px);
+        min-height: 100svh;
+        display: grid;
+        place-items: center;
+        padding: clamp(10px, 3vw, 22px);
+      }
+
+      .shell {
+        position: relative;
+        width: min(100%, 680px);
+        aspect-ratio: 1 / 1;
+        max-height: calc(100svh - 20px);
+        border: 6px solid #fff0a8;
+        border-radius: 0;
+        overflow: hidden;
+        background: #162512;
+        box-shadow:
+          12px 12px 0 rgba(0, 0, 0, 0.42),
+          inset 0 0 0 5px #1f4bd8,
+          inset 0 0 0 10px #ffd000;
+      }
+
+      canvas {
+        display: block;
+        width: 100%;
+        height: 100%;
+        image-rendering: pixelated;
+        image-rendering: crisp-edges;
+        background: var(--field);
+      }
+
+      .hud {
+        position: absolute;
+        inset: 14px 14px auto;
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 10px;
+        pointer-events: none;
+      }
+
+      .scoreboard,
+      .hint {
+        border: 3px solid #221b13;
+        border-radius: 0;
+        color: #1d170e;
+        background: #ffd84b;
+        box-shadow: 5px 5px 0 rgba(0, 0, 0, 0.34);
+      }
+
+      .scoreboard {
+        min-width: 146px;
+        padding: 8px 10px;
+        text-transform: uppercase;
+      }
+
+      .scoreboard strong {
+        display: block;
+        font-size: clamp(0.78rem, 2.7vw, 0.98rem);
+        letter-spacing: 0;
+      }
+
+      .scoreboard span {
+        display: block;
+        margin-top: 2px;
+        font-size: clamp(0.68rem, 2.2vw, 0.82rem);
+        font-weight: 800;
+      }
+
+      .hint {
+        max-width: 250px;
+        padding: 8px 10px;
+        font-size: clamp(0.68rem, 2.3vw, 0.88rem);
+        font-weight: 900;
+        line-height: 1.15;
+        text-align: right;
+      }
+
+      .meters {
+        position: absolute;
+        right: 16px;
+        bottom: 16px;
+        left: 16px;
+        display: grid;
+        gap: 10px;
+        pointer-events: none;
+      }
+
+      .meter {
+        display: grid;
+        grid-template-columns: 82px 1fr;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .label {
+        display: grid;
+        place-items: center;
+        min-height: 28px;
+        padding: 4px 6px;
+        border: 3px solid #21170e;
+        border-radius: 0;
+        color: #21170e;
+        background: #fff0a8;
+        box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.32);
+        font-size: clamp(0.64rem, 2.5vw, 0.82rem);
+        font-weight: 900;
+        text-transform: uppercase;
+      }
+
+      .track {
+        position: relative;
+        height: 28px;
+        border: 3px solid #21170e;
+        border-radius: 0;
+        overflow: hidden;
+        background:
+          linear-gradient(90deg, #f33 0 16%, #ffd93b 16% 36%, #36d05c 36% 64%, #ffd93b 64% 84%, #f33 84%),
+          #fff;
+        box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.32);
+      }
+
+      .track.power {
+        background: linear-gradient(90deg, #59d85f 0%, #ffe55c 52%, #f04b2f 100%);
+      }
+
+      .needle {
+        position: absolute;
+        top: -4px;
+        bottom: -4px;
+        left: 50%;
+        width: 10px;
+        border: 2px solid #1a130b;
+        border-radius: 0;
+        background: #fffdf1;
+        box-shadow: none;
+        transform: translateX(-50%);
+      }
+
+      .touch-button {
+        position: absolute;
+        right: 18px;
+        bottom: 96px;
+        display: none;
+        width: 76px;
+        height: 76px;
+        border: 4px solid #20170e;
+        border-radius: 0;
+        color: #20170e;
+        background: #ffd000;
+        box-shadow: 6px 6px 0 rgba(0, 0, 0, 0.38);
+        font-size: 0.78rem;
+        font-weight: 900;
+        text-transform: uppercase;
+      }
+
+      .overlay {
+        position: absolute;
+        inset: 0;
+        display: grid;
+        place-items: center;
+        padding: clamp(14px, 4vw, 28px);
+        visibility: hidden;
+        opacity: 0;
+        transition:
+          opacity 220ms ease,
+          visibility 220ms ease;
+        background: rgba(11, 26, 20, 0.62);
+      }
+
+      #inviteOverlay {
+        position: fixed;
+        z-index: 10;
+        overflow-y: auto;
+        background:
+          radial-gradient(circle at 20% 18%, rgba(255, 217, 59, 0.28), transparent 18rem),
+          radial-gradient(circle at 80% 12%, rgba(29, 78, 216, 0.24), transparent 18rem),
+          rgba(11, 26, 20, 0.82);
+      }
+
+      .overlay.is-open {
+        visibility: visible;
+        opacity: 1;
+      }
+
+      .poster {
+        position: relative;
+        width: min(100%, 520px);
+        aspect-ratio: 2 / 3;
+        max-height: calc(100svh - 24px);
+        overflow-y: auto;
+        display: grid;
+        align-content: start;
+        justify-items: center;
+        gap: clamp(7px, 1.8vw, 11px);
+        padding: clamp(92px, 14vw, 118px) clamp(58px, 8.4vw, 74px) clamp(70px, 9vw, 86px);
+        border: 5px solid #5c3400;
+        border-radius: 0;
+        color: var(--ink);
+        text-align: center;
+        background:
+          linear-gradient(rgba(255, 232, 126, 0.1), rgba(255, 196, 48, 0.08)),
+          url("assets/golden-ticket.png") center / cover no-repeat;
+        box-shadow:
+          10px 10px 0 rgba(0, 0, 0, 0.45),
+          inset 0 0 0 3px rgba(255, 240, 120, 0.86);
+        isolation: isolate;
+        image-rendering: pixelated;
+      }
+
+      .poster::before,
+      .poster::after {
+        position: absolute;
+        z-index: -1;
+        content: "";
+      }
+
+      .poster::before {
+        inset: clamp(52px, 10vw, 82px) clamp(30px, 6vw, 50px) clamp(36px, 7vw, 58px);
+        border-radius: 0;
+        background: rgba(255, 241, 165, 0.22);
+        box-shadow: inset 0 0 0 3px rgba(112, 71, 8, 0.12);
+      }
+
+      .poster::after {
+        inset: 0;
+        border-radius: 0;
+        background: repeating-linear-gradient(
+          to bottom,
+          rgba(255, 255, 255, 0.12) 0 2px,
+          transparent 2px 6px
+        );
+        opacity: 0.28;
+        pointer-events: none;
+      }
+
+      .poster-kicker {
+        justify-self: center;
+        width: fit-content;
+        padding: 6px 13px;
+        border: 3px solid #3c2508;
+        border-radius: 0;
+        color: #fff0a8;
+        background: #143c8c;
+        box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.34);
+        font-size: clamp(0.72rem, 2.4vw, 0.92rem);
+        font-family: "Courier New", Monaco, Consolas, monospace;
+        font-weight: 900;
+        text-transform: uppercase;
+      }
+
+      .poster h1 {
+        margin: 0;
+        color: #0d6b38;
+        font-family: "Courier New", Monaco, Consolas, monospace;
+        font-size: clamp(2.75rem, 10.5vw, 4.8rem);
+        font-weight: 900;
+        line-height: 0.88;
+        letter-spacing: 0;
+        text-shadow:
+          2px 2px 0 #fff3a8,
+          4px 4px 0 #d1a321,
+          6px 6px 0 #123b84;
+      }
+
+      .poster h2 {
+        margin: 0;
+        max-width: 390px;
+        color: #17427f;
+        font-family: "Courier New", Monaco, Consolas, monospace;
+        font-size: clamp(0.86rem, 3vw, 1.18rem);
+        font-weight: 900;
+        line-height: 1.14;
+        text-transform: uppercase;
+        text-shadow:
+          1px 1px 0 rgba(255, 244, 185, 0.95),
+          2px 2px 0 rgba(179, 119, 12, 0.22);
+      }
+
+      .poster p {
+        max-width: 355px;
+        margin: 0 auto;
+        color: #3b2808;
+        font-family: "Courier New", Monaco, Consolas, monospace;
+        font-size: clamp(0.82rem, 2.8vw, 1.02rem);
+        font-weight: 900;
+        line-height: 1.22;
+        text-shadow: 1px 1px 0 rgba(255, 244, 185, 0.86);
+      }
+
+      .details {
+        display: grid;
+        grid-template-columns: 0.85fr 1.45fr 0.85fr;
+        width: min(100%, 390px);
+        gap: 7px;
+        margin-top: 4px;
+      }
+
+      .detail {
+        min-width: 0;
+        padding: 9px 7px;
+        border: 3px solid #5c3608;
+        border-radius: 0;
+        color: #2d1f08;
+        background: rgba(255, 246, 199, 0.86);
+        box-shadow:
+          4px 4px 0 rgba(0, 0, 0, 0.3),
+          inset 0 0 0 2px rgba(255, 217, 59, 0.24);
+      }
+
+      .detail b,
+      .detail span {
+        display: block;
+      }
+
+      .detail b {
+        color: #123b84;
+        font-size: clamp(0.62rem, 2.2vw, 0.78rem);
+        text-transform: uppercase;
+      }
+
+      .detail span {
+        margin-top: 4px;
+        font-size: clamp(0.78rem, 2.6vw, 0.94rem);
+        font-weight: 900;
+        line-height: 1.08;
+      }
+
+      .actions {
+        display: flex;
+        justify-content: center;
+        gap: 10px;
+        flex-wrap: wrap;
+      }
+
+      button {
+        cursor: pointer;
+        font: inherit;
+      }
+
+      .cta {
+        min-height: 42px;
+        padding: 9px 14px;
+        border: 3px solid #21170e;
+        border-radius: 0;
+        color: #21170e;
+        background: #fff0a8;
+        box-shadow: 5px 5px 0 rgba(0, 0, 0, 0.34);
+        font-size: clamp(0.78rem, 3vw, 0.94rem);
+        font-weight: 900;
+        text-transform: uppercase;
+      }
+
+      .cta.primary {
+        color: #fffbe8;
+        background: #15803d;
+      }
+
+      .start-card {
+        width: min(100%, 450px);
+        padding: clamp(18px, 4vw, 26px);
+        border: 5px solid #21170e;
+        border-radius: 0;
+        color: #21170e;
+        text-align: center;
+        background: #ffd84b;
+        box-shadow: 10px 10px 0 rgba(0, 0, 0, 0.42);
+      }
+
+      .start-card h2 {
+        margin: 0 0 8px;
+        font-family: "Courier New", Monaco, Consolas, monospace;
+        font-size: clamp(2rem, 8.8vw, 4rem);
+        line-height: 0.95;
+        letter-spacing: 0;
+        color: #0d7a3e;
+        text-shadow:
+          3px 3px 0 #fff8d1,
+          6px 6px 0 #1d4ed8;
+      }
+
+      .start-card p {
+        margin: 0 0 16px;
+        font-size: clamp(0.9rem, 3.2vw, 1.08rem);
+        font-weight: 900;
+        line-height: 1.25;
+      }
+
+      .result {
+        position: absolute;
+        left: 50%;
+        top: 47%;
+        width: min(84%, 420px);
+        padding: 10px 14px;
+        border: 4px solid #21170e;
+        border-radius: 0;
+        color: #21170e;
+        background: #fff4bd;
+        box-shadow: 6px 7px 0 rgba(0, 0, 0, 0.26);
+        font-family: "Courier New", Monaco, Consolas, monospace;
+        font-size: clamp(2.2rem, 11vw, 5.4rem);
+        line-height: 0.95;
+        text-align: center;
+        transform: translate(-50%, -50%) scale(0.85);
+        opacity: 0;
+        pointer-events: none;
+        transition:
+          opacity 180ms ease,
+          transform 180ms ease;
+      }
+
+      .result.is-visible {
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(1);
+      }
+
+      @media (max-width: 520px) {
+        .app {
+          padding: 8px;
+        }
+
+        .shell {
+          width: min(100%, calc(100svh - 16px));
+          border-width: 4px;
+        }
+
+        .hud {
+          inset: 10px 10px auto;
+        }
+
+        .hint {
+          max-width: 172px;
+        }
+
+        .meters {
+          right: 10px;
+          bottom: 10px;
+          left: 10px;
+          gap: 7px;
+        }
+
+        .meter {
+          grid-template-columns: 70px 1fr;
+          gap: 6px;
+        }
+
+        .track {
+          height: 24px;
+        }
+
+        .touch-button {
+          display: block;
+        }
+
+        .poster {
+          max-height: calc(100svh - 16px);
+          padding: 76px 42px 28px;
+          gap: 5px;
+        }
+
+        .poster h1 {
+          font-size: clamp(2.25rem, 11.8vw, 3rem);
+        }
+
+        .poster h2 {
+          font-size: clamp(0.7rem, 3.15vw, 0.84rem);
+        }
+
+        .poster p {
+          font-size: clamp(0.68rem, 3.05vw, 0.8rem);
+          line-height: 1.16;
+        }
+
+        .details {
+          grid-template-columns: 1fr;
+          max-width: 270px;
+          justify-self: center;
+          width: 100%;
+          gap: 6px;
+        }
+
+        .detail {
+          padding: 5px 8px;
+        }
+
+        .detail b {
+          font-size: 0.6rem;
+        }
+
+        .detail span {
+          margin-top: 2px;
+          font-size: 0.78rem;
+        }
+
+        .actions {
+          gap: 6px;
+        }
+
+        .cta {
+          min-height: 36px;
+          padding: 7px 9px;
+          font-size: 0.72rem;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="app">
+      <section class="shell" aria-label="Mini game de penalti e convite de aniversario">
+        <canvas id="game" width="720" height="720"></canvas>
+
+        <div class="hud" aria-hidden="true">
+          <div class="scoreboard">
+            <strong>Brasil 30</strong>
+            <span id="statusText">Escolha a mira</span>
+          </div>
+          <div class="hint" id="hintText">Espaço / Toque: direção</div>
+        </div>
+
+        <div class="meters" aria-hidden="true">
+          <div class="meter">
+            <div class="label">Direção</div>
+            <div class="track">
+              <div class="needle" id="aimNeedle"></div>
+            </div>
+          </div>
+          <div class="meter">
+            <div class="label">Força</div>
+            <div class="track power">
+              <div class="needle" id="powerNeedle"></div>
+            </div>
+          </div>
+        </div>
+
+        <button class="touch-button" id="touchButton" type="button" aria-label="Chutar">Chutar</button>
+        <div class="result" id="resultText" aria-live="polite"></div>
+
+        <div class="overlay is-open" id="startOverlay">
+          <div class="start-card">
+            <h2>Gol dos 30</h2>
+            <p>Marque um gol e ganhe um super prêmio. Mire, escolha a força e bata para o convite aparecer.</p>
+            <button class="cta primary" id="startButton" type="button">Começar jogo</button>
+          </div>
+        </div>
+
+        <div class="overlay" id="inviteOverlay">
+          <article class="poster" aria-label="Convite de aniversario da Ingrid">
+            <div class="poster-kicker">Você ganhou um convite</div>
+            <h2>Para a noite mais importante do ano</h2>
+            <h1>INGRID 30's</h1>
+            <p>Então vem comigo assistir o jogo do Brasil, pular fogueira e cantar parabéns.</p>
+            <div class="details">
+              <div class="detail">
+                <b>Dia</b>
+                <span>24/06</span>
+              </div>
+              <div class="detail">
+                <b>Local</b>
+                <span>Petite Gastrobar (Lagoa)</span>
+              </div>
+              <div class="detail">
+                <b>Horário</b>
+                <span>18h30</span>
+              </div>
+            </div>
+            <div class="actions">
+              <button class="cta primary" id="againButton" type="button">Jogar de novo</button>
+            </div>
+          </article>
+        </div>
+      </section>
+    </main>
+
+    <script>
+      const canvas = document.querySelector("#game");
+      const ctx = canvas.getContext("2d");
+      ctx.imageSmoothingEnabled = false;
+      const aimNeedle = document.querySelector("#aimNeedle");
+      const powerNeedle = document.querySelector("#powerNeedle");
+      const statusText = document.querySelector("#statusText");
+      const hintText = document.querySelector("#hintText");
+      const resultText = document.querySelector("#resultText");
+      const startOverlay = document.querySelector("#startOverlay");
+      const inviteOverlay = document.querySelector("#inviteOverlay");
+      const startButton = document.querySelector("#startButton");
+      const touchButton = document.querySelector("#touchButton");
+      const againButton = document.querySelector("#againButton");
+
+      const W = 720;
+      const H = 720;
+      const BALL_START = { x: 303, y: 603, r: 13 };
+      const RED_ZONE = 0.16;
+      const assetPaths = {
+        ingrid: "assets/ingrid-player.png",
+        nina: "assets/nina-goalie.png",
+        goal: "assets/cat-goal.png",
+        crowd: "assets/cat-crowd.png",
+        bunting: "assets/bunting.png",
+        bonfire: "assets/bonfire.png",
+        ball: "assets/football.png",
+      };
+      const assets = Object.fromEntries(
+        Object.entries(assetPaths).map(([key, src]) => {
+          const image = new Image();
+          image.src = src;
+          return [key, image];
+        }),
+      );
+
+      const state = {
+        screen: "start",
+        phase: "aim",
+        aim: 0.5,
+        power: 0.5,
+        aimDir: 1,
+        powerDir: 1,
+        keeperX: 0,
+        keeperTarget: 0,
+        ball: { ...BALL_START, vx: 0, vy: 0 },
+        shot: null,
+        messageTimer: 0,
+        time: 0,
+        kickTimer: 0,
+        crowdCheer: 0,
+        confetti: [],
+        lastTime: performance.now(),
+      };
+
+      function easeInOut(t) {
+        return t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+      }
+
+      function clamp(value, min, max) {
+        return Math.max(min, Math.min(max, value));
+      }
+
+      function resetRound() {
+        state.screen = "play";
+        state.phase = "aim";
+        state.aim = 0.5;
+        state.power = 0.5;
+        state.aimDir = 1;
+        state.powerDir = 1;
+        state.keeperX = 0;
+        state.keeperTarget = 0;
+        state.ball = { ...BALL_START, vx: 0, vy: 0 };
+        state.shot = null;
+        state.messageTimer = 0;
+        state.kickTimer = 0;
+        state.crowdCheer = 0;
+        state.confetti = [];
+        resultText.classList.remove("is-visible");
+        inviteOverlay.classList.remove("is-open");
+        startOverlay.classList.remove("is-open");
+        statusText.textContent = "Escolha a mira";
+        hintText.textContent = "Espaço / Toque: direção";
+        updateMeters();
+      }
+
+      function updateMeters() {
+        aimNeedle.style.left = `${state.aim * 100}%`;
+        powerNeedle.style.left = `${state.power * 100}%`;
+      }
+
+      function command() {
+        if (state.screen === "start") {
+          resetRound();
+          return;
+        }
+
+        if (state.screen !== "play") return;
+
+        if (state.phase === "aim") {
+          state.phase = "power";
+          statusText.textContent = "Escolha a força";
+          hintText.textContent = "Espaço / Toque: força";
+          return;
+        }
+
+        if (state.phase === "power") {
+          shoot();
+        }
+      }
+
+      function shoot() {
+        state.phase = "shooting";
+        state.kickTimer = 0.56;
+        state.crowdCheer = 0.95;
+        statusText.textContent = "Valendo!";
+        hintText.textContent = "Boa sorte!";
+        const goalLeft = 214;
+        const goalWidth = 292;
+        const aimRed = state.aim <= RED_ZONE || state.aim >= 1 - RED_ZONE;
+        const powerRed = state.power <= RED_ZONE || state.power >= 1 - RED_ZONE;
+        const targetX = aimRed
+          ? state.aim < 0.5
+            ? goalLeft - 58
+            : goalLeft + goalWidth + 58
+          : powerRed && state.power > 0.5
+            ? state.aim < 0.5
+              ? goalLeft - 72
+              : goalLeft + goalWidth + 72
+            : goalLeft + state.aim * goalWidth;
+        const targetY = powerRed
+          ? state.power < 0.5
+            ? 430
+            : 104
+          : 414 - (state.power - 0.5) * 18;
+        const powerQuality = 1 - Math.abs(state.power - 0.62) * 1.45;
+        const aimQuality = 1 - Math.abs(state.aim - 0.5) * 0.5;
+        const baseGoalChance = clamp(0.78 + powerQuality * 0.1 + aimQuality * 0.08, 0.58, 0.93);
+        const redMistake = aimRed || powerRed;
+        const cleanAim = state.aim >= 0.36 && state.aim <= 0.64;
+        const cleanPower = state.power >= 0.36 && state.power <= 0.84;
+        const isGoal = redMistake ? false : cleanAim && cleanPower ? true : Math.random() < baseGoalChance;
+        const keeperBias = targetX < 360 ? -1 : 1;
+        const keeperMiss = isGoal ? keeperBias * -90 : redMistake ? keeperBias * -20 : keeperBias * 28;
+        state.keeperTarget = clamp(targetX - 360 + keeperMiss, -130, 130);
+        state.shot = {
+          startX: state.ball.x,
+          startY: state.ball.y,
+          targetX,
+          targetY,
+          time: 0,
+          duration: 0.86,
+          isGoal,
+          missReason: aimRed ? "wide" : powerRed && state.power > 0.5 ? "high" : powerRed ? "weak" : "save",
+        };
+      }
+
+      function showResult(text) {
+        resultText.textContent = text;
+        resultText.classList.add("is-visible");
+      }
+
+      function unlockInvite() {
+        state.screen = "invite";
+        state.phase = "done";
+        state.crowdCheer = 1.8;
+        spawnConfetti();
+        showResult("GOOOOL!");
+        setTimeout(() => {
+          inviteOverlay.classList.add("is-open");
+          resultText.classList.remove("is-visible");
+        }, 900);
+      }
+
+      function missShot(reason = "save") {
+        const copy = {
+          wide: "Pra fora!",
+          high: "Isolou!",
+          weak: "Chute fraco!",
+          save: "Defendeu!",
+        };
+        showResult(copy[reason] || copy.save);
+        state.crowdCheer = 0.45;
+        statusText.textContent = "Nova tentativa";
+        hintText.textContent = "Prepare a mira";
+        setTimeout(() => {
+          resultText.classList.remove("is-visible");
+          resetRound();
+        }, 950);
+      }
+
+      function spawnConfetti() {
+        const colors = ["#ffd93b", "#15803d", "#1d4ed8", "#d92f2f", "#fff4bd"];
+        state.confetti = Array.from({ length: 90 }, () => ({
+          x: 160 + Math.random() * 400,
+          y: 150 + Math.random() * 170,
+          vx: -1.8 + Math.random() * 3.6,
+          vy: -4.6 - Math.random() * 3.2,
+          size: 5 + Math.random() * 8,
+          color: colors[Math.floor(Math.random() * colors.length)],
+          rot: Math.random() * Math.PI,
+          spin: -0.16 + Math.random() * 0.32,
+        }));
+      }
+
+      function update(dt) {
+        state.time += dt;
+        state.kickTimer = Math.max(0, state.kickTimer - dt);
+        state.crowdCheer = Math.max(0, state.crowdCheer - dt);
+
+        if (state.screen === "play" && state.phase === "aim") {
+          state.aim += state.aimDir * dt * 0.78;
+          if (state.aim >= 1 || state.aim <= 0) {
+            state.aim = clamp(state.aim, 0, 1);
+            state.aimDir *= -1;
+          }
+        }
+
+        if (state.screen === "play" && state.phase === "power") {
+          state.power += state.powerDir * dt * 1.05;
+          if (state.power >= 1 || state.power <= 0) {
+            state.power = clamp(state.power, 0, 1);
+            state.powerDir *= -1;
+          }
+        }
+
+        if (state.phase === "shooting" && state.shot) {
+          state.shot.time += dt;
+          const progress = clamp(state.shot.time / state.shot.duration, 0, 1);
+          const eased = easeInOut(progress);
+          const arc = Math.sin(progress * Math.PI) * 14;
+          state.ball.x = state.shot.startX + (state.shot.targetX - state.shot.startX) * eased;
+          state.ball.y = state.shot.startY + (state.shot.targetY - state.shot.startY) * eased - arc;
+          state.ball.r = 13 - progress * 5;
+          state.keeperX += (state.keeperTarget - state.keeperX) * dt * 6.2;
+
+          if (progress >= 1) {
+            const finishedGoal = state.shot.isGoal;
+            const missReason = state.shot.missReason;
+            state.shot = null;
+            finishedGoal ? unlockInvite() : missShot(missReason);
+          }
+        }
+
+        for (const piece of state.confetti) {
+          piece.x += piece.vx;
+          piece.y += piece.vy;
+          piece.vy += 0.18;
+          piece.rot += piece.spin;
+        }
+
+        updateMeters();
+      }
+
+      function drawField() {
+        ctx.imageSmoothingEnabled = false;
+        ctx.fillStyle = "#2aa84f";
+        ctx.fillRect(0, 0, W, H);
+        for (let i = 0; i < 9; i++) {
+          ctx.fillStyle = i % 2 ? "#16733a" : "#2aa84f";
+          ctx.fillRect(i * 80, 0, 80, H);
+        }
+
+        ctx.strokeStyle = "#fff0a8";
+        ctx.lineWidth = 4;
+        ctx.strokeRect(94, 172, 532, 410);
+        ctx.beginPath();
+        ctx.arc(360, 520, 92, Math.PI, 0);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.arc(360, 520, 5, 0, Math.PI * 2);
+        ctx.fillStyle = "#fff8d1";
+        ctx.fill();
+
+        ctx.fillStyle = "rgba(11, 31, 95, 0.16)";
+        for (let x = 0; x <= W; x += 24) {
+          ctx.fillRect(x, 0, 4, 238);
+        }
+
+        drawCrowd();
+      }
+
+      function drawCrowd() {
+        const cheer = state.crowdCheer > 0 ? 1 : 0;
+        const bounce = cheer ? Math.sin(state.time * 28) * 7 * Math.min(1, state.crowdCheer * 2) : 0;
+        const sway = cheer ? Math.sin(state.time * 18) * 4 : Math.sin(state.time * 2) * 1.5;
+        drawImageContain(assets.crowd, 28 + sway, 86 + bounce, 664, 172, "bottom");
+
+        if (!cheer) return;
+        ctx.save();
+        ctx.font = "900 24px 'Courier New', Monaco, monospace";
+        ctx.textAlign = "center";
+        ctx.lineWidth = 5;
+        ctx.strokeStyle = "#21170e";
+        ctx.fillStyle = "#ffd93b";
+        const y = 92 + Math.sin(state.time * 22) * 5;
+        ctx.strokeText("MIAU!", 160, y);
+        ctx.fillText("MIAU!", 160, y);
+        ctx.strokeText("VAI!", 560, y + 10);
+        ctx.fillText("VAI!", 560, y + 10);
+        ctx.restore();
+      }
+
+      function drawGoal() {
+        if (isReady(assets.goal)) {
+          drawImageContain(assets.goal, 170, 176, 380, 260, "bottom");
+          return;
+        }
+
+        drawFallbackGoal();
+      }
+
+      function drawKeeper() {
+        if (isReady(assets.nina)) {
+          drawImageContain(assets.nina, 280 + state.keeperX, 260, 156, 174, "center");
+          return;
+        }
+
+        const baseX = 360 + state.keeperX;
+        const baseY = 305;
+        ctx.save();
+        ctx.translate(baseX, baseY);
+
+        ctx.strokeStyle = "#21170e";
+        ctx.lineWidth = 10;
+        ctx.lineCap = "round";
+        ctx.beginPath();
+        ctx.moveTo(-20, 18);
+        ctx.lineTo(-70, -18);
+        ctx.moveTo(20, 18);
+        ctx.lineTo(70, -18);
+        ctx.moveTo(-14, 66);
+        ctx.lineTo(-40, 105);
+        ctx.moveTo(14, 66);
+        ctx.lineTo(42, 105);
+        ctx.stroke();
+
+        ctx.fillStyle = "#ffdf51";
+        roundedRect(-35, -8, 70, 84, 12);
+        ctx.fill();
+        ctx.strokeStyle = "#21170e";
+        ctx.lineWidth = 4;
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.arc(0, -32, 24, 0, Math.PI * 2);
+        ctx.fillStyle = "#8d542c";
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.fillStyle = "#21170e";
+        ctx.fillRect(-10, -38, 5, 5);
+        ctx.fillRect(8, -38, 5, 5);
+        ctx.fillRect(-9, -22, 20, 4);
+        ctx.fillStyle = "#1d4ed8";
+        ctx.fillRect(-27, 22, 54, 13);
+        ctx.restore();
+      }
+
+      function drawPlayer() {
+        if (isReady(assets.ingrid)) {
+          drawKickingPlayer();
+          return;
+        }
+
+        ctx.save();
+        ctx.translate(262, 625);
+        ctx.strokeStyle = "#21170e";
+        ctx.lineWidth = 8;
+        ctx.lineCap = "round";
+        ctx.beginPath();
+        ctx.moveTo(-8, 20);
+        ctx.lineTo(-28, 58);
+        ctx.moveTo(13, 20);
+        ctx.lineTo(42, 49);
+        ctx.moveTo(-20, -18);
+        ctx.lineTo(-48, 10);
+        ctx.moveTo(22, -18);
+        ctx.lineTo(58, -6);
+        ctx.stroke();
+
+        ctx.fillStyle = "#1d4ed8";
+        roundedRect(-28, -44, 56, 72, 10);
+        ctx.fill();
+        ctx.strokeStyle = "#21170e";
+        ctx.lineWidth = 4;
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.arc(0, -67, 22, 0, Math.PI * 2);
+        ctx.fillStyle = "#9a6338";
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.fillStyle = "#ffd93b";
+        ctx.fillRect(-22, -24, 44, 14);
+        ctx.restore();
+      }
+
+      function drawKickingPlayer() {
+        const kickProgress = state.kickTimer > 0 ? 1 - state.kickTimer / 0.56 : 0;
+        const snap = kickProgress > 0 ? Math.sin(Math.min(1, kickProgress) * Math.PI) : 0;
+        const windup = state.phase === "power" ? Math.sin(state.time * 5) * 2 : 0;
+        const x = 136 + snap * 24;
+        const y = 414 - snap * 12 + windup;
+        const rotation = (-0.08 + snap * 0.24) * (Math.PI / 6);
+        const scale = 1 + snap * 0.04;
+        drawImageContainTransformed(assets.ingrid, x, y, 220, 238, "bottom", rotation, scale);
+      }
+
+      function drawBall() {
+        if (isReady(assets.ball)) {
+          const size = state.ball.r * 3.4;
+          ctx.drawImage(assets.ball, state.ball.x - size / 2, state.ball.y - size / 2, size, size);
+          return;
+        }
+
+        ctx.save();
+        ctx.translate(state.ball.x, state.ball.y);
+        ctx.beginPath();
+        ctx.arc(0, 0, state.ball.r, 0, Math.PI * 2);
+        ctx.fillStyle = "#fffbe8";
+        ctx.fill();
+        ctx.strokeStyle = "#21170e";
+        ctx.lineWidth = 3;
+        ctx.stroke();
+        ctx.fillStyle = "#21170e";
+        for (let i = 0; i < 5; i++) {
+          const a = i * ((Math.PI * 2) / 5);
+          ctx.beginPath();
+          ctx.arc(Math.cos(a) * state.ball.r * 0.45, Math.sin(a) * state.ball.r * 0.45, state.ball.r * 0.16, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.restore();
+      }
+
+      function drawDecor() {
+        if (isReady(assets.bunting)) {
+          drawImageContain(assets.bunting, 62, 126, 260, 70, "center");
+          drawImageContain(assets.bunting, 408, 126, 250, 68, "center");
+        } else {
+          drawFlagString(78, 128);
+          drawFlagString(492, 128);
+        }
+
+        if (isReady(assets.bonfire)) {
+          drawImageContain(assets.bonfire, 580, 566, 88, 104, "bottom");
+          drawImageContain(assets.bonfire, 70, 590, 68, 80, "bottom");
+        } else {
+          drawFire(615, 590, 0.7);
+          drawFire(88, 606, 0.55);
+        }
+      }
+
+      function isReady(image) {
+        return image.complete && image.naturalWidth > 0;
+      }
+
+      function drawImageContain(image, x, y, width, height, align = "center") {
+        if (!isReady(image)) return false;
+        const scale = Math.min(width / image.naturalWidth, height / image.naturalHeight);
+        const drawWidth = image.naturalWidth * scale;
+        const drawHeight = image.naturalHeight * scale;
+        const dx = x + (width - drawWidth) / 2;
+        let dy = y + (height - drawHeight) / 2;
+        if (align === "bottom") dy = y + height - drawHeight;
+        ctx.drawImage(image, dx, dy, drawWidth, drawHeight);
+        return true;
+      }
+
+      function drawImageContainTransformed(image, x, y, width, height, align = "center", rotation = 0, scaleBoost = 1) {
+        if (!isReady(image)) return false;
+        const scale = Math.min(width / image.naturalWidth, height / image.naturalHeight) * scaleBoost;
+        const drawWidth = image.naturalWidth * scale;
+        const drawHeight = image.naturalHeight * scale;
+        const cx = x + width / 2;
+        const cy = align === "bottom" ? y + height : y + height / 2;
+        ctx.save();
+        ctx.translate(cx, cy);
+        ctx.rotate(rotation);
+        ctx.drawImage(image, -drawWidth / 2, align === "bottom" ? -drawHeight : -drawHeight / 2, drawWidth, drawHeight);
+        ctx.restore();
+        return true;
+      }
+
+      function drawFallbackGoal() {
+        const left = 190;
+        const top = 196;
+        const width = 340;
+        const height = 154;
+
+        ctx.fillStyle = "rgba(255,255,255,0.18)";
+        ctx.fillRect(left + 15, top + 12, width - 30, height - 6);
+
+        ctx.strokeStyle = "rgba(255,255,255,0.48)";
+        ctx.lineWidth = 2;
+        for (let x = left + 24; x < left + width; x += 28) {
+          ctx.beginPath();
+          ctx.moveTo(x, top + 10);
+          ctx.lineTo(x - 18, top + height);
+          ctx.stroke();
+        }
+        for (let y = top + 24; y < top + height; y += 24) {
+          ctx.beginPath();
+          ctx.moveTo(left + 12, y);
+          ctx.lineTo(left + width - 12, y);
+          ctx.stroke();
+        }
+
+        ctx.strokeStyle = "#fffbe8";
+        ctx.lineWidth = 12;
+        ctx.lineCap = "round";
+        ctx.beginPath();
+        ctx.moveTo(left, top + height);
+        ctx.lineTo(left, top);
+        ctx.lineTo(left + width, top);
+        ctx.lineTo(left + width, top + height);
+        ctx.stroke();
+
+        ctx.strokeStyle = "#21170e";
+        ctx.lineWidth = 4;
+        ctx.stroke();
+      }
+
+      function drawFlagString(x, y) {
+        ctx.strokeStyle = "#fff4bd";
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(x, y);
+        ctx.quadraticCurveTo(x + 75, y + 36, x + 150, y);
+        ctx.stroke();
+        const colors = ["#ffd93b", "#d92f2f", "#1d4ed8", "#15803d"];
+        for (let i = 0; i < 6; i++) {
+          ctx.fillStyle = colors[i % colors.length];
+          ctx.beginPath();
+          ctx.moveTo(x + 18 + i * 23, y + 8 + Math.sin(i) * 7);
+          ctx.lineTo(x + 34 + i * 23, y + 12 + Math.sin(i) * 7);
+          ctx.lineTo(x + 24 + i * 23, y + 34 + Math.sin(i) * 7);
+          ctx.closePath();
+          ctx.fill();
+          ctx.strokeStyle = "#21170e";
+          ctx.lineWidth = 2;
+          ctx.stroke();
+        }
+      }
+
+      function drawFire(x, y, scale) {
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.scale(scale, scale);
+        ctx.strokeStyle = "#5b2d14";
+        ctx.lineWidth = 8;
+        ctx.lineCap = "round";
+        ctx.beginPath();
+        ctx.moveTo(-34, 28);
+        ctx.lineTo(34, -12);
+        ctx.moveTo(34, 28);
+        ctx.lineTo(-34, -12);
+        ctx.stroke();
+        ctx.fillStyle = "#f47a22";
+        ctx.beginPath();
+        ctx.moveTo(0, -58);
+        ctx.quadraticCurveTo(44, -12, 4, 30);
+        ctx.quadraticCurveTo(-38, -2, 0, -58);
+        ctx.fill();
+        ctx.fillStyle = "#ffd93b";
+        ctx.beginPath();
+        ctx.moveTo(4, -38);
+        ctx.quadraticCurveTo(25, -8, 0, 18);
+        ctx.quadraticCurveTo(-21, -5, 4, -38);
+        ctx.fill();
+        ctx.restore();
+      }
+
+      function drawConfetti() {
+        for (const piece of state.confetti) {
+          ctx.save();
+          ctx.translate(piece.x, piece.y);
+          ctx.rotate(piece.rot);
+          ctx.fillStyle = piece.color;
+          ctx.fillRect(-piece.size / 2, -piece.size / 2, piece.size, piece.size * 0.55);
+          ctx.restore();
+        }
+      }
+
+      function roundedRect(x, y, width, height, radius) {
+        ctx.beginPath();
+        ctx.moveTo(x + radius, y);
+        ctx.lineTo(x + width - radius, y);
+        ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
+        ctx.lineTo(x + width, y + height - radius);
+        ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
+        ctx.lineTo(x + radius, y + height);
+        ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
+        ctx.lineTo(x, y + radius);
+        ctx.quadraticCurveTo(x, y, x + radius, y);
+      }
+
+      function draw() {
+        drawField();
+        drawDecor();
+        if (state.ball.y < 440) {
+          drawBall();
+        }
+        drawGoal();
+        drawKeeper();
+        drawPlayer();
+        if (state.ball.y >= 440) {
+          drawBall();
+        }
+        drawConfetti();
+      }
+
+      function loop(now) {
+        const dt = Math.min((now - state.lastTime) / 1000, 0.033);
+        state.lastTime = now;
+        update(dt);
+        draw();
+        requestAnimationFrame(loop);
+      }
+
+      document.addEventListener("keydown", (event) => {
+        if (event.code === "Space" || event.code === "Enter") {
+          event.preventDefault();
+          command();
+        }
+      });
+
+      canvas.addEventListener("pointerdown", command);
+      touchButton.addEventListener("click", command);
+      startButton.addEventListener("click", command);
+      againButton.addEventListener("click", resetRound);
+
+      updateMeters();
+      requestAnimationFrame(loop);
+    </script>
+  </body>
+</html>
